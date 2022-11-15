@@ -1,0 +1,256 @@
+---
+title: "MAST8820 – First Assessment"
+subtitle: "Solutions"
+author: "Mirza Ameen Hyder"
+output:
+  html_document:
+    self_contained: true
+fontsize: 12pt
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+```
+
+## Question 1:
+
+Consider the data set `weightlifters.csv` available on Moodle, that contains information about 98 weightlifters divided into two training groups. After 2 months of training, it was measured how much improvement in weight they achieved regarding a specific movement, i.e., how many more kilograms they were able to lift in a specific movement.
+
+a) Produce one plot that could show the difference between the distribution of weight improvement given the two training groups and comment.
+
+```{r, fig.align='center', fig.height=3}
+
+library(dplyr)
+library(tidyverse)
+library(ggplot2)
+library(readr)
+library(MASS)
+
+setwd('C:\\Users\\ameen\\Desktop\\assignment1_adv_reg_analysis')
+df1 <- read_csv('weightlifters.csv', col_names = TRUE, show_col_types = FALSE)
+
+hist_diff <-ggplot(df1, aes(x=weight_improvement, color=training_groups)) +
+  geom_histogram(fill="white", position="dodge", alpha = 1)+
+  theme(legend.position="top")
+hist_diff
+
+density_diff <-ggplot(df1, aes(x=weight_improvement, color=training_groups)) +
+  geom_density(fill="#FF6666", position="dodge", alpha = 0.2)
+density_diff
+
+```
+
+There seems to be more improvement in the amount of weight lifting capacity of training group A, as it evident from the above graph that median/mean weight improvement of training group A is roughly in the range of 12 and 13 kgs, whereas the median/mean weight improvement of training group B is roughly in  the range of 6 and 7 kgs.
+
+(b) Fit a simple linear regression model with weight improvament as the response variable and training group as the explanatory variable and output the summary of the model.
+
+``` {r}
+
+lin_model <- lm(weight_improvement ~ training_groups, data = df1)
+summary(lin_model)
+
+```
+
+(c) Interpret the simple linear regression model fitted in part b) by referring to the estimated intercept and slope of the model.
+
+The intercept of the model shows that the estimated mean value of weight improvement is `r round(coef(lin_model)[1], 2)` kgs for training group A. The slope of the model show that on average training group B has `r abs(round(coef(lin_model)[2], 2))` kgs less improvement in weight lifting than training group A. In other words, training group B has estimated mean value of `r round(coef(lin_model)[1], 2) + (round(coef(lin_model)[2], 2))` kgs in weight lifting capacity 
+
+(d) Construct a 95\% confidence intervals for the coefficients of the model fitted in part c).
+
+``` {r}
+confint(lin_model)
+## formula used = estimate +(-) 1.96 * Std. Error
+```
+
+(e) What does the summary of the model suggest about the importance of the different training routines as a predictor for weight improvement?
+
+Given the estimates for the parameters, related p-values and even the confidence intervals presented in the previous item, we have evidence to say that different training groups/routines is important to explain the variation of weight improvement and hence can be used as a predictor. Hence, we reject the hypothesis that the effect of `training_groups` is equal to zero.
+
+(f) Plot the studentised residuals versus the fitted values of the model and comment.
+
+```{r, fig.height = 3}
+
+st_resid <- studres(lin_model)
+fitted_values <- predict.lm(lin_model,data.frame(training_groups = df1$training_groups))
+
+df_resid_fit <- data.frame(`st_resid` = st_resid, `fitted_values` =  fitted_values)
+df_resid_fit$pred_group = ifelse(fitted_values <= 12,'B','A')
+
+plot(fitted_values ,st_resid)
+abline(0,0)
+
+ggplot(df_resid_fit, aes(x=st_resid, color=pred_group)) +
+  geom_density(fill="#FF6666", position="dodge", alpha = 0.2)
+
+```
+
+For this model, it seems that the linearity assumption and the homocedasticity assumption are  met. The majority of residuals for both groups are scattered around point 0 and ranging around maximum -2 and 2. Same observation can be made with the density plot as density of residuals for both training groups is concentrated around 0 with tails getting flatter around -2 and 2. 
+
+(g) Produce a QQ-plot of the studentised residuals of the model fitted and comment.
+
+``` {r, fig.height = 3}
+
+qqnorm(st_resid)
+qqline(st_resid)
+
+```
+
+The above qq-plot shows that the assumption of normality for the errors is met, as majority of the residuals roughly lies on the straight line. 
+
+(h) Define the multiple R-squared that is reported in the summary of the model and comment on its value in this case.
+
+The multiple R-squared for the model is equal to `r round(summary(lin_model)$r.squared, 3)`, which shows that this model is able to explain `r 100 * round(summary(lin_model)$r.squared, 3)`% of the variability in the weight improvements. 
+
+(i) Plot the estimated normal densities given the parameters of the model and compare with the real values. Does this estimates show that model explain the variation of weight improvement as a function of the training groups?
+
+``` {r, fig.height = 3}
+
+densA <- data.frame('rand' = rnorm(10000, 12.1318, 2.342), 'group' = rep('A',10000))
+densB <- data.frame('rand' = rnorm(10000, 7.8389, 2.342), 'group' = rep('B',10000))
+
+est_dens <- rbind(densA,densB)
+
+
+density_diff_est <-ggplot(est_dens, aes(x=rand, color = group)) +
+  geom_density(fill="#FF6666", position="dodge", alpha = 0.2) + ggtitle('Estimated Normal Densities')
+
+density_diff_est
+
+density_diff_real <-ggplot(df1, aes(x=weight_improvement, color=training_groups)) +
+  geom_density(fill="yellow", position="dodge", alpha = 0.2) + ggtitle('Real Densities') 
+
+density_diff_real
+
+```
+
+Yes the estimates show that model explain the variation in the weight improvement as a function of the training groups. The two plots that are generated estimated vs. real, they seems to be quite similar. The estimated densities for group A and B is concentrated around 11 and 13, and 6 and 7 respectively, which are also the same for the real densities. 
+
+## Question 2:
+
+Consider the data set `rent.csv` available on Moodle, with information about 297 people and how much they pay for rent. This data set should be considered only for modelling purposes and not as an actual sample of the population. It contains variables age, professional area (Education, Finance and Construction) and city (London and Canterbury), as well as their respective rent for a given month.
+
+(a) Produce a scatterplot of the data with age in the x-axis and rent in the y-axis and comment.
+
+``` {r, fig.align='center', fig.height=3}
+
+df2 <- read_csv('rent.csv',  col_names = TRUE, show_col_types = FALSE)
+ggplot(data=df2, aes(x=age,y=rent)) + geom_point(shape = 18, color = 'black', size = 1) + theme_minimal()
+
+```
+
+There is some rough linearly increasing relation between age and rent which outlines that people with higher ages tend to pay as their rents. 
+
+(b) Fit a simple linear regression model with rent as the response variable and age, professional area and city as the explanatory variables. Output the summary of the model and interpret the model fitted.
+
+``` {r}
+
+lin_model2 <- lm(data=df2, rent ~ age + cities + professional_area)
+summary(lin_model2)
+
+```
+The average rent paid by the people of age 0 that live in Canterbury, and have professional area as construction is around 451.859. However, the intercept term in this model does not make a lot of sense. Similarly, people living in London pay £72.920 more than the people living in Canterbury given that other variables remain constant. Also, with every 1 year of increment in age, the rent of a person tends to increase by £16.133 on average given that other variables remains constant. Lastly, the people belonging to Education and Finance tends to pay £193.759 and £515.370 more respectively in their rent as compared to people belonging to Construction given that other variables remain constant.
+
+(c) Update the model fitted in part b) adding an interaction term between professional area and city. Interpret the results obtained and outline the differences with the conclusion in part b). 
+
+``` {r}
+
+lin_model3 <- lm(data=df2, rent ~ age + (cities * professional_area))
+summary(lin_model3)
+
+```
+Interpretation: Though it does not really make sense to interpret the intercept, however, for theoretical purpose, it means that estimated rent for people having age 0 who belong to city Canterbury and with professional area construction is `r round(coef(lin_model3)[1], 2)` (lets say it group 1). Similarly, for people living in Canterbury who has professional area as Education on average pay `r round(coef(lin_model3)[4], 2)` more pounds in their rent as compared to group 1 given that age remains constant. Along the same line, people living in Canterbury with professional area as Finance on average pay `r round(coef(lin_model3)[5], 2)`  more pounds in their rent as compared to group 1 given that age remains constant. On the other hand, people who live in London with professional areas as construction on average pay `r round(coef(lin_model3)[3], 2)` less pounds in their rent as compared to group 1 given that age remains constant (lets say this group 2). Moreover, people living in London with professional area as Education pay `r round(coef(lin_model3)[6], 2) + round(coef(lin_model3)[4], 2)` more pounds in their rent as compared to group 1 given that age remains constant. Lastly, people living in London with professional area as Education pay `r round(coef(lin_model3)[7], 2) + round(coef(lin_model3)[5], 2)` less pounds in their rent as compared to group 1 given that age remains constant.
+
+Differences: or outlining the differences, it would be easier to talk in terms of groups and the average rent each model predicts for that group:
+* For City = Canterbury and Professiona_area = Construction, model 1 predicts average rent of 451.859 and model 2 predicts 541.2412 (given that age = 0). 
+* For City = Canterbury and Professiona_area = Education, model 1 predicts average rent of 645.618 and model 2 predicts 463.3096 (given that age remains constant).
+* For City = Canterbury and Professiona_area = Education, model 1 predicts average rent of 645.618 and model 2 predicts 463.3096 (given that age remains constant).
+* For City = Canterbury and Professiona_area = Finance, model 1 predicts average rent of 967.229 and model 2 predicts 810.4873 (given that age remains constant).
+* For City = London and Professiona_area = Construction, model 1 predicts average rent of 524.779 and model 2 predicts 463.3096 (given that age is 0).
+* For City = London and Professiona_area = Education, model 1 predicts average rent of 718.538 and model 2 predicts 652.1274 (given that age remains constant).
+* For City = London and Professiona_area = Finance, model 1 predicts average rent of 1040.149 and model 2 predicts 1158.19 (given that age remains constant).
+
+Model 2 has interaction terms in it and that is the reason why estimates for different groups has been changed.
+
+(d) Plot the studentised residuals of versus the fitted values of the model fitted in part c) and comment.
+
+``` {r , fig.align='center', fig.height=3}
+
+st_resid_2 <- studres(lin_model3)
+fitted_values <- predict.lm(lin_model3,df2[, c('age', 'cities', 'professional_area')])
+
+plot(fitted_values ,st_resid_2)
+abline(0,0)
+
+```
+
+For this model, it seems that the linearity assumption and the homocedasticity assumption are  met. The majority of residuals for the fitted values are scattered around point 0 and ranging around maximum -2 and 2.
+
+(e) Produce a QQ-plot of the studentised residuals of the model model fitted in part c) and comment.
+
+``` {r , fig.align='center', fig.height=3}
+
+qqnorm(st_resid_2)
+qqline(st_resid_2)
+
+```
+The above qq-plot shows that the assumption of normality for the errors is met, as majority of the residuals roughly lies on the straight line in the range of -1 and 1. There are some minor deviations from the straight line at the extremes but as their quanitity is quite low it would be safe to ignore them. 
+
+(f) Consider the method ”forward selection” to pick one model to explain the variation of rent as a function of age, professional area and city with any important interaction term and comment the results. Find out which interaction is important
+
+``` {r}
+
+FitFirst <- lm(data=df2, rent ~ 1)
+
+Fitall1 <- lm(data=df2, rent ~ age + (cities * professional_area) + (cities * age) + (age * professional_area) + (age * professional_area * cities)) 
+
+step(FitFirst, scope = formula(Fitall1) , direction = 'forward')
+
+```
+Comment: According to forward selection, the full model has the lowest AIC, i.e., all the variables and their possible interaction terms are important in predicting the rent of specific group of people. In other words, the rent for people with a specific age, city and profession tends to vary in a different way then the people with other age, city and profession. One more important observation is that age and professional area tends to play bigger role in predicting the rents of individuals as compared to where they live in as cities variable is added in the forward selection after age and profession has been added. This observation is also consistent with the models made in previous parts where cities were having low significane and higher p-values.
+
+(g) Plot the estimated densities of rent given the model selected in the previous item. 
+
+``` {r, fig.align='center', fig.height=3 }
+
+
+lin_model4 <- lm(data=df2, rent ~  age + (cities * professional_area) + (cities * age) + (age * professional_area) + (age * professional_area * cities))
+
+## selected group A: city: London, professional_area: Finance and age = 40 (mean age of the data)
+
+is_london =  1
+is_finance = 1
+is_education = 0 
+age = 40
+
+mean1 <- round(coef(lin_model4)[1], 2)  + (age * round(coef(lin_model4)[2], 2)) + (is_london * round(coef(lin_model4)[3], 2))  + (is_education * round(coef(lin_model4)[4], 2)) + (is_finance * round(coef(lin_model4)[5], 2)) + (is_london * is_education * round(coef(lin_model4)[6], 2))  + (is_london * is_finance *(round(coef(lin_model4)[7], 2)))  + (age * is_london * round(coef(lin_model4)[8], 2)) + (age * is_education * round(coef(lin_model4)[9], 2))  + (age * is_finance * round(coef(lin_model4)[10], 2)) + (age * is_london * is_education * round(coef(lin_model4)[11], 2))  + (age * is_london * is_finance * round(coef(lin_model4)[12], 2))
+
+## selected group B: city: Canterb, professional_area: Finance and age = 40 (mean age of the data)
+
+is_london =  0
+is_finance = 1
+is_education = 0 
+age = 40
+
+
+mean2 <- round(coef(lin_model4)[1], 2)  + (age * round(coef(lin_model4)[2], 2)) + (is_london * round(coef(lin_model4)[3], 2))  + (is_education * round(coef(lin_model4)[4], 2)) + (is_finance * round(coef(lin_model4)[5], 2)) + (is_london * is_education * round(coef(lin_model4)[6], 2))  + (is_london * is_finance *(round(coef(lin_model4)[7], 2)))  + (age * is_london * round(coef(lin_model4)[8], 2)) + (age * is_education * round(coef(lin_model4)[9], 2))  + (age * is_finance * round(coef(lin_model4)[10], 2)) + (age * is_london * is_education * round(coef(lin_model4)[11], 2))  + (age * is_london * is_finance * round(coef(lin_model4)[12], 2))
+  
+st_dev <- 189.6
+
+groupA <- data.frame('rand' = rnorm(10000, mean1, st_dev), 'group' = rep('A',10000))
+groupB <- data.frame('rand' = rnorm(10000, mean2, st_dev), 'group' = rep('B',10000))
+
+
+est_dens <- rbind(groupA,groupB)
+
+
+density_diff_est <-ggplot(est_dens, aes(x=rand, color = group)) +
+  geom_density(fill="#FF6666", position="dodge", alpha = 0.2) + ggtitle('Estimated Normal Densities')
+
+density_diff_est
+
+
+
+
+
+```
+The above estimated densities shows that the people belonging to group A that is who live in London, belong to Finance profession and have age equal to 40 on average pay more rent (around 1700 to 1800 roughly) as compared to people with same profession and age who live in Canterbury (around 1200 to 1300)
